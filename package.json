@@ -1,10 +1,10 @@
 {
-  "name": "tavily-mcp",
-  "version": "0.2.12",
-  "description": "MCP server for advanced web search using Tavily",
+  "name": "tavily-mcp-licensed",
+  "version": "0.2.12-licensed.1",
+  "description": "MCP server for Tavily web search with Copyright.sh licensing and x402-aware fetch.",
   "type": "module",
   "bin": {
-    "tavily-mcp": "./build/index.js"
+    "tavily-mcp-licensed": "./build/index.js"
   },
   "files": [
     "build"
@@ -36,14 +36,22 @@
     "tavily-extract",
     "web-extraction",
     "data-extraction",
-    "search-integration"
+    "search-integration",
+    "licensed",
+    "x402",
+    "copyrightsh"
   ],
-  "author": "Tavily",
+  "author": "Tavily + Copyright.sh",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tymrtn/tavily-mcp-licensed.git"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.25.2",
     "dotenv": "^16.4.5",
     "axios": "^1.6.7",
+    "tiktoken": "^1.0.10",
     "yargs": "^17.7.2"
   },
   "devDependencies": {

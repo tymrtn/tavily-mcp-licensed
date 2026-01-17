@@ -11,7 +11,33 @@ startCommand:
       tavilyApiKey:
         type: string
         description: The API key for the Tavily MCP server.
+      ledgerApi:
+        type: string
+        description: Optional base URL for the Copyright.sh license ledger.
+      ledgerApiKey:
+        type: string
+        description: API key for Copyright.sh license discovery and usage logging.
+      enableLicenseTracking:
+        type: boolean
+        description: Enable or disable Copyright.sh license tracking (default true).
+      enableLicenseCache:
+        type: boolean
+        description: Cache license results to reduce ledger calls (default false).
+      licenseCacheTtlSeconds:
+        type: number
+        description: Cache TTL in seconds when license cache is enabled.
   commandFunction:
     # A function that produces the CLI command to start the MCP on stdio.
     |-
-    config => ({ command: 'node', args: ['build/index.js'], env: { TAVILY_API_KEY: config.tavilyApiKey } })
+    config => ({
+      command: 'node',
+      args: ['build/index.js'],
+      env: {
+        TAVILY_API_KEY: config.tavilyApiKey,
+        ...(config.ledgerApi ? { COPYRIGHTSH_LEDGER_API: config.ledgerApi } : {}),
+        ...(config.ledgerApiKey ? { COPYRIGHTSH_LEDGER_API_KEY: config.ledgerApiKey } : {}),
+        ...(config.enableLicenseTracking !== undefined ? { ENABLE_LICENSE_TRACKING: String(config.enableLicenseTracking) } : {}),
+        ...(config.enableLicenseCache !== undefined ? { ENABLE_LICENSE_CACHE: String(config.enableLicenseCache) } : {}),
+        ...(config.licenseCacheTtlSeconds !== undefined ? { LICENSE_CACHE_TTL_SECONDS: String(config.licenseCacheTtlSeconds) } : {})
+      }
+    })

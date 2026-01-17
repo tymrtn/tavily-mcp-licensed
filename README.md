@@ -1,8 +1,27 @@
-![GitHub Repo stars](https://img.shields.io/github/stars/tavily-ai/tavily-mcp?style=social)
-![npm](https://img.shields.io/npm/dt/tavily-mcp)
-![smithery badge](https://smithery.ai/badge/@tavily-ai/tavily-mcp)
+![GitHub Repo stars](https://img.shields.io/github/stars/tymrtn/tavily-mcp-licensed?style=social)
+![npm](https://img.shields.io/npm/dt/tavily-mcp-licensed)
+![smithery badge](https://smithery.ai/badge/@tymrtn/tavily-mcp-licensed)
 
 ![MCP demo](./assets/demo_new.gif)
+
+## Tavily MCP (Licensed Fork)
+
+This repo is a fork of `tavily-ai/tavily-mcp` with Copyright.sh licensing:
+- automatic `ai-license` discovery
+- optional x402-aware fetch (402 + `payment-required: x402`)
+- usage logging to the Copyright.sh ledger for compensation/audit
+
+Drop-in compatible tool names remain `tavily-*`. When following upstream install instructions, replace `tavily-mcp` with `tavily-mcp-licensed` and add the ledger env vars below.
+
+### Licensing env vars
+
+- `COPYRIGHTSH_LEDGER_API` (default: `https://ledger.copyright.sh`)
+- `COPYRIGHTSH_LEDGER_API_KEY` (recommended for acquire + usage logging)
+- `ENABLE_LICENSE_TRACKING` (default: `true`)
+- `ENABLE_LICENSE_CACHE` (default: `false`)
+
+License-aware options (for search/extract/crawl):
+- `fetch`, `stage`, `distribution`, `estimated_tokens`, `max_chars`, `payment_method`
 
 The Tavily MCP server provides:
 - search, extract, map, crawl tools
