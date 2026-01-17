@@ -32,6 +32,15 @@ if (!API_KEY) {
   throw new Error("TAVILY_API_KEY environment variable is required");
 }
 
+function getUnavailableReason(license?: LicenseInfo, fetched?: LicensedFetchResult): string | null {
+  if (license?.action === "deny") return "license denied";
+  if (fetched?.status === 401 || fetched?.status === 403) {
+    return `blocked (${fetched.status})`;
+  }
+  if (fetched?.status === 402) return "payment required";
+  return null;
+}
+
 class TavilyClient {
   private server: Server;
   private axiosInstance;
@@ -509,7 +518,7 @@ class TavilyClient {
     stage: LicenseStage,
     distribution: Distribution
   ): Promise<void> {
-    if (!license) return;
+    if (!license || license.action === "deny") return;
 
     const tokens = this.licenseService.estimateTokens(content);
     if (tokens === 0) return;
@@ -517,17 +526,19 @@ class TavilyClient {
     await this.licenseService.logUsage(url, tokens, license, stage, distribution);
   }
 
-  private formatFetchedResult(fetched?: LicensedFetchResult): string[] {
+  private formatFetchedResult(fetched?: LicensedFetchResult, unavailableReason?: string | null): string[] {
     if (!fetched) return [];
 
     const lines: string[] = [];
     lines.push(`Fetched Status: ${fetched.status} (${fetched.final_url})`);
 
-    if (fetched.content_text) {
+    if (fetched.content_text && !unavailableReason) {
       const preview = fetched.content_text.length > 200
         ? `${fetched.content_text.substring(0, 200)}...`
         : fetched.content_text;
       lines.push(`Fetched Content: ${preview}`);
+    } else if (unavailableReason) {
+      lines.push(`Fetched Content: (unavailable: ${unavailableReason})`);
     }
 
     if (fetched.acquire) {
@@ -573,6 +584,10 @@ class TavilyClient {
 
     if (fetch) {
       for (const url of urls) {
+        const existingLicense = licenses.get(url);
+        if (existingLicense?.action === "deny") {
+          continue;
+        }
         const fetched = await licensedFetchText(url, {
           ledger: this.licenseService,
           stage,
@@ -622,6 +637,11 @@ class TavilyClient {
     if (fetch) {
       const results: Array<{ url: string; content?: string; raw_content?: string }> = [];
       for (const url of urls) {
+        const existingLicense = licenses.get(url);
+        if (existingLicense?.action === "deny") {
+          results.push({ url, content: "", raw_content: "" });
+          continue;
+        }
         const fetched = await licensedFetchText(url, {
           ledger: this.licenseService,
           stage,
@@ -699,6 +719,10 @@ class TavilyClient {
 
     if (fetch) {
       for (const result of crawlResponse.results) {
+        const existingLicense = licenses.get(result.url);
+        if (existingLicense?.action === "deny") {
+          continue;
+        }
         const fetched = await licensedFetchText(result.url, {
           ledger: this.licenseService,
           stage,
@@ -890,22 +914,27 @@ class TavilyClient {
     response.results.forEach((result) => {
       const license = licenses.get(result.url);
       const fetched = fetchedByUrl ? fetchedByUrl[result.url] : undefined;
+      const unavailableReason = getUnavailableReason(license, fetched);
       const tokens = this.licenseService.estimateTokens(
-        fetched?.content_text || result.content || result.raw_content || ""
+        unavailableReason ? "" : (fetched?.content_text || result.content || result.raw_content || "")
       );
 
       output.push(`\nTitle: ${result.title}`);
       output.push(`URL: ${result.url}`);
-      output.push(`Content: ${result.content}`);
-      if (result.raw_content) {
-        output.push(`Raw Content: ${result.raw_content}`);
+      if (unavailableReason) {
+        output.push(`Content: (unavailable: ${unavailableReason})`);
+      } else {
+        output.push(`Content: ${result.content}`);
+        if (result.raw_content) {
+          output.push(`Raw Content: ${result.raw_content}`);
+        }
       }
       if (result.favicon) {
         output.push(`Favicon: ${result.favicon}`);
       }
 
       if (fetched) {
-        output.push(...this.formatFetchedResult(fetched));
+        output.push(...this.formatFetchedResult(fetched, unavailableReason));
       }
 
       if (license) {
@@ -946,19 +975,24 @@ class TavilyClient {
     response.results.forEach((result: any, index: number) => {
       const license = licenses.get(result.url);
       const fetched = fetchedByUrl ? fetchedByUrl[result.url] : undefined;
+      const unavailableReason = getUnavailableReason(license, fetched);
       const tokens = this.licenseService.estimateTokens(
-        fetched?.content_text || result.content || result.raw_content || ""
+        unavailableReason ? "" : (fetched?.content_text || result.content || result.raw_content || "")
       );
 
       output.push(`[${index + 1}] ${result.url}`);
-      output.push(result.content || result.raw_content || "(no content)");
+      if (unavailableReason) {
+        output.push(`(unavailable: ${unavailableReason})`);
+      } else {
+        output.push(result.content || result.raw_content || "(no content)");
+      }
 
       if (result.favicon) {
         output.push(`Favicon: ${result.favicon}`);
       }
 
       if (fetched) {
-        output.push(...this.formatFetchedResult(fetched));
+        output.push(...this.formatFetchedResult(fetched, unavailableReason));
       }
 
       if (license) {
@@ -986,21 +1020,28 @@ class TavilyClient {
     response.results.forEach((page, index) => {
       const license = licenses.get(page.url);
       const fetched = fetchedByUrl ? fetchedByUrl[page.url] : undefined;
-      const tokens = this.licenseService.estimateTokens(fetched?.content_text || page.raw_content || "");
+      const unavailableReason = getUnavailableReason(license, fetched);
+      const tokens = this.licenseService.estimateTokens(
+        unavailableReason ? "" : (fetched?.content_text || page.raw_content || "")
+      );
 
       output.push(`[${index + 1}] ${page.url}`);
 
-      const preview = page.raw_content?.length > 200
-        ? page.raw_content.substring(0, 200) + "..."
-        : page.raw_content;
-      output.push(`Content: ${preview || "(no content)"}`);
+      if (unavailableReason) {
+        output.push(`Content: (unavailable: ${unavailableReason})`);
+      } else {
+        const preview = page.raw_content?.length > 200
+          ? page.raw_content.substring(0, 200) + "..."
+          : page.raw_content;
+        output.push(`Content: ${preview || "(no content)"}`);
+      }
 
       if (page.favicon) {
         output.push(`Favicon: ${page.favicon}`);
       }
 
       if (fetched) {
-        output.push(...this.formatFetchedResult(fetched));
+        output.push(...this.formatFetchedResult(fetched, unavailableReason));
       }
 
       if (license) {

@@ -125,14 +125,19 @@ export class LicenseService {
       // Prefer the general 'ai-license' type, or take the first one
       const licenseData = licenseArray.find((l: any) => l.license_type === 'ai-license') || licenseArray[0];
 
+      const optStatus = licenseData.opt_in_status;
+      const found = optStatus === 'opt-in' || optStatus === 'opt-out';
+      const action: 'allow' | 'deny' | 'unknown' =
+        optStatus === 'opt-in' ? 'allow' : optStatus === 'opt-out' ? 'deny' : 'unknown';
+
       const license: LicenseInfo = {
         url,
-        license_found: licenseData.opt_in_status === 'opt-in',
-        action: licenseData.opt_in_status === 'opt-in' ? 'allow' : licenseData.opt_in_status === 'opt-out' ? 'deny' : 'unknown',
+        license_found: found,
+        action,
         price: licenseData.rate_per_token,
         payto: licenseData.wallet_id,
         license_version_id: licenseData.id,
-        license_sig: undefined, // HMAC signature would come from ledger if implemented
+        license_sig: undefined,
         license_type: licenseData.license_type
       };
 
