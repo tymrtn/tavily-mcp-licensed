@@ -23,6 +23,10 @@ Drop-in compatible tool names remain `tavily-*`. When following upstream install
 License-aware options (for search/extract/crawl):
 - `fetch`, `stage`, `distribution`, `estimated_tokens`, `max_chars`, `payment_method`
 
+Unavailable policy:
+- License denied or HTTP 401/403/402 results are returned as unavailable
+- Unknown license remains best-effort
+
 The Tavily MCP server provides:
 - search, extract, map, crawl tools
 - Real-time web search capabilities through the tavily-search tool
